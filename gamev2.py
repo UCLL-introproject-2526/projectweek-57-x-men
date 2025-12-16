@@ -1,15 +1,3 @@
-# BRAWL STARS STYLE MAZE (FIXED & COMPLETE)
-# ---------------------------------------
-# Features:
-# - Big map
-# - Bushes hide player (image-based)
-# - Player uses GIF image
-# - Coins to collect (win condition)
-# - Health bar
-# - 2 monsters with wander + chase AI
-# - Monsters cannot see player in bushes
-# - Camera zoom & shake on collision
-
 import pygame
 import random
 
@@ -21,19 +9,19 @@ FPS = 60
 
 MAP = [
     "############################",
-    "#......##....##....##.....#",
-    "#.####..##..##..####..####..#",
-    "#..BB...........BB......B.#",
-    "#..BB..######..BB..######..#",
-    "#......#....#......#.....#",
-    "#######.#.##.#.#######.#####",
-    "#......#....#......#.....#",
-    "#..BB..######..BB......BB.#",
-    "#..BB...........BB......B.#",
-    "#.####..##..##..####..####..#",
-    "#......##....##....##.....#",
-    "#..BB......BB......BB.....#",
-    "#......#....#......#.....#",
+    "#......##....##....##......#",
+    "#.####..##..##..####..####.#",
+    "#..BB...........BB......B..#",
+    "#..BB..#..###..BB..######..#",
+    "#......#....#......#.......#",
+    "#####.......#.........#####",
+    "#......#....#......#.......#",
+    "#..BB..######..BB......BB.##",
+    "#..BB...........BB......BB.#",
+    "#.####..##..##..####..##..##",
+    "#......##....##....##......#",
+    "#..BB......BB......BB......#",
+    "#......#....#......#.....#.#",
     "############################",
 ]
 
@@ -67,9 +55,9 @@ class Camera:
     def apply(self, surface):
         w, h = surface.get_size()
         scaled = pygame.transform.scale(surface, (int(w*self.zoom), int(h*self.zoom)))
-        offset_x = random.randint(-self.shake, self.shake)
-        offset_y = random.randint(-self.shake, self.shake)
-        screen.blit(scaled, (offset_x, offset_y))
+        ox = random.randint(-self.shake, self.shake)
+        oy = random.randint(-self.shake, self.shake)
+        screen.blit(scaled, (ox, oy))
 
 # ---------- PLAYER ----------
 class Player:
@@ -101,7 +89,11 @@ class Player:
                 if dy < 0: self.rect.top = w.bottom
 
     def draw(self, surf):
-        if not self.hidden:
+        if self.hidden:
+            img = self.image.copy()
+            img.set_alpha(120)
+            surf.blit(img, self.rect)
+        else:
             surf.blit(self.image, self.rect)
 
 # ---------- MONSTER ----------
@@ -140,9 +132,7 @@ class Monster:
 
 # ---------- MAP ----------
 def draw_map(surf):
-    walls = []
-    bushes = []
-    coins = []
+    walls, bushes, coins = [], [], []
 
     for y, row in enumerate(MAP):
         for x, tile in enumerate(row):
@@ -152,58 +142,71 @@ def draw_map(surf):
             if tile == '#':
                 pygame.draw.rect(surf, WALL, rect)
                 walls.append(rect)
-
             elif tile == 'B':
                 surf.blit(bush_img, rect.topleft)
                 bushes.append(rect)
-
-            elif tile == '.':
-                if random.random() < 0.04:
-                    coin = pygame.Rect(rect.centerx-6, rect.centery-6, 12, 12)
-                    coins.append(coin)
+            elif tile == '.' and random.random() < 0.04:
+                coins.append(pygame.Rect(rect.centerx-6, rect.centery-6, 12, 12))
 
     return walls, bushes, coins
 
 # ---------- MAIN ----------
 def main():
-    player = Player()
-    monsters = [
-        Monster(TILE_SIZE*10, TILE_SIZE*5),
-        Monster(TILE_SIZE*20, TILE_SIZE*10)
-    ]
-    camera = Camera()
+    def reset_game():
+        return (
+            Player(),
+            [
+                Monster(TILE_SIZE*10, TILE_SIZE*5),
+                Monster(TILE_SIZE*20, TILE_SIZE*10)
+            ],
+            Camera(),
+            False,
+            False
+        )
 
+    player, monsters, camera, game_over, win = reset_game()
     base_surface = pygame.Surface((WIDTH, HEIGHT))
     walls, bushes, coins = draw_map(base_surface)
     total_coins = len(coins)
+    font = pygame.font.SysFont(None, 36)
 
-    font = pygame.font.SysFont(None, 32)
+    play_again_btn = pygame.Rect(WIDTH//2-100, HEIGHT//2+40, 200, 40)
+
     running = True
-
     while running:
         clock.tick(FPS)
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 running = False
+            if e.type == pygame.MOUSEBUTTONDOWN and (game_over or win):
+                if play_again_btn.collidepoint(e.pos):
+                    player, monsters, camera, game_over, win = reset_game()
+                    walls, bushes, coins = draw_map(base_surface)
+                    total_coins = len(coins)
 
         keys = pygame.key.get_pressed()
-
         base_surface.fill((0,0,0))
         walls, bushes, _ = draw_map(base_surface)
 
-        player.update(keys, walls)
-        player.hidden = any(player.rect.colliderect(b) for b in bushes)
+        if not game_over and not win:
+            player.update(keys, walls)
+            player.hidden = any(player.rect.colliderect(b) for b in bushes)
 
-        for coin in coins[:]:
-            if player.rect.colliderect(coin):
-                coins.remove(coin)
+            for coin in coins[:]:
+                if player.rect.colliderect(coin):
+                    coins.remove(coin)
 
-        for m in monsters:
-            m.update(walls, player)
-            if m.rect.colliderect(player.rect):
-                player.health -= 0.4
-                camera.shake = 8
-                camera.zoom = 1.1
+            for m in monsters:
+                m.update(walls, player)
+                if m.rect.colliderect(player.rect):
+                    player.health -= 0.4
+                    camera.shake = 8
+                    camera.zoom = 1.1
+
+            if player.health <= 0:
+                game_over = True
+            if len(coins) == 0:
+                win = True
 
         camera.shake = max(0, camera.shake - 1)
         camera.zoom += (1.0 - camera.zoom) * 0.1
@@ -216,18 +219,16 @@ def main():
         player.draw(base_surface)
 
         # UI
-        pygame.draw.rect(base_surface, (200,0,0), (20, 20, 200, 16))
-        pygame.draw.rect(base_surface, (0,200,0), (20, 20, 2*player.health, 16))
-        text = font.render(f"Coins: {total_coins-len(coins)}/{total_coins}", True, (255,255,255))
-        base_surface.blit(text, (20, 45))
+        pygame.draw.rect(base_surface, (200,0,0), (20,20,200,16))
+        pygame.draw.rect(base_surface, (0,200,0), (20,20,2*player.health,16))
+        base_surface.blit(font.render(f"Coins: {total_coins-len(coins)}/{total_coins}", True, (255,255,255)), (20,45))
 
-        if len(coins) == 0:
-            win = font.render("YOU WIN!", True, (255,255,0))
-            base_surface.blit(win, (WIDTH//2-60, HEIGHT//2))
-
-        if player.health <= 0:
-            over = font.render("GAME OVER", True, (255,50,50))
-            base_surface.blit(over, (WIDTH//2-80, HEIGHT//2))
+        if game_over or win:
+            msg = "GAME OVER" if game_over else "YOU WIN!"
+            base_surface.blit(font.render(msg, True, (255,255,0)), (WIDTH//2-80, HEIGHT//2-40))
+            pygame.draw.rect(base_surface, (50,150,50), play_again_btn, border_radius=8)
+            base_surface.blit(font.render("PLAY AGAIN", True, (255,255,255)),
+                              (play_again_btn.x+30, play_again_btn.y+8))
 
         screen.fill((0,0,0))
         camera.apply(base_surface)
@@ -235,5 +236,5 @@ def main():
 
     pygame.quit()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
