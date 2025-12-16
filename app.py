@@ -1,5 +1,5 @@
 import pygame
 
-# Initialize Pygameertyuittt
+# Initialize Pygame
 
 pygame.init()

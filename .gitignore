@@ -195,13 +195,13 @@ pyrightconfig.json
 # End of https://www.toptal.com/developers/gitignore/api/python,visualstudiocode
 
 
-*.jpg
-*.jpeg
-*.png
-*.wav
-*.mp3
-*.ogg
-*.midi
-*.zip
-*.7z
-*.rar
+# *.jpg
+# *.jpeg
+# *.png
+# *.wav
+# *.mp3
+# *.ogg
+# *.midi
+# *.zip
+# *.7z
+# *.rar
