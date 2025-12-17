@@ -11,6 +11,7 @@ pygame.mixer.init()
 # ---------------- SETTINGS ----------------
 TILE_SIZE = 40
 FPS = 60
+SAVE_FILE = "savegame.json"
 
 # ---------------- LEVEL MAPS ----------------
 LEVELS = [
@@ -42,7 +43,7 @@ LEVELS = [
         "#......BB......BB......BB..##",
         "#..##....####....##....##.#.#",
         "#..BB....####....BB....#..#.#",
-        "#......BB......BB......BB...#",
+        "#......BB......BB......BB..##",
         "####..######..######..####..#",
         "#......#......#......#...#..#",
         "#..BB......BB......BB.......#",
@@ -62,19 +63,19 @@ LEVELS = [
         "#.#..#..............#..#...#",
         "#.#..###.##..#..#.###..#.#.#",
         "#.#BB....#......#....BB#...#",
-        "#.#.##..#..##....#..#.#.....",
+        "#.#.##..#..##....#..#.#....#",
         "############################",
     ]
 ]
 
-# Calculate Screen Size based on Level 1
+# Calculate Screen Size
 ROWS = len(LEVELS[0])
 COLS = len(LEVELS[0][0])
 WIDTH = COLS * TILE_SIZE
 HEIGHT = ROWS * TILE_SIZE
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Horror Maze - FASTER MONSTERS")
+pygame.display.set_caption("Horror Maze - Why Are You Running?")
 clock = pygame.time.Clock()
 
 # ---------------- COLORS ----------------
@@ -224,9 +225,9 @@ def main_menu():
                 if e.key == pygame.K_SPACE:
                     menu_running = False
 
-# ---------------- MAIN ----------------
+# ---------------- MAIN LOOP ----------------
 def main():
-    while True: # Outer loop to return to Main Menu
+    while True: # Wrap everything in a loop to return to menu
         main_menu()
         
         level_idx = 0
@@ -238,20 +239,9 @@ def main():
             player = Player(spawn_pos)
             player.lives = current_lives
             
-            monsters = []
-            num_monsters = level_idx + 2
-            spawn_locs = [
-                (WIDTH - 80, HEIGHT - 80), 
-                (WIDTH - 80, 80), 
-                (80, HEIGHT - 80), 
-                (WIDTH // 2, HEIGHT // 2)
-            ]
+            # Monster speed increases per level
             
-            for i in range(num_monsters):
-                loc = spawn_locs[i % len(spawn_locs)]
-                # INCREASED SPEED HERE: Base 2.2 + 0.5 per level
-                monsters.append(Monster(loc[0], loc[1], 2.2 + (level_idx * 0.5)))
-
+            
             if not coins: coins.append(pygame.Rect(WIDTH//2, HEIGHT//2, 12, 12))
 
             level_running = True
@@ -264,6 +254,7 @@ def main():
                 keys = pygame.key.get_pressed()
                 player.move(keys, walls, bushes)
 
+                # Monster Collision Logic
                 for m in monsters:
                     m.update(player, walls)
                     if m.rect.colliderect(player.rect) and player.invince_frames <= 0 and not player.is_hidden:
@@ -275,14 +266,14 @@ def main():
                         if player.lives <= 0:
                             player.move_channel.stop()
                             end_screen("GAME OVER", RED)
-                            game_active = False
+                            game_active = False # Break to outer loop
                             level_running = False
-                            break
 
+                # Coin Collection
                 for c in coins[:]:
                     if player.rect.colliderect(c): coins.remove(c)
 
-                # Draw
+                # Rendering
                 screen.fill((0,0,0))
                 for y in range(len(LEVELS[level_idx])):
                     for x in range(len(LEVELS[level_idx][0])):
@@ -294,19 +285,22 @@ def main():
                 for m in monsters: m.draw(screen)
                 player.draw(screen)
                 
-                # HUD (Lives)
+                # HUD
                 for i in range(player.lives):
                     pygame.draw.rect(screen, RED, (15 + i*30, 15, 20, 20))
                 
                 pygame.display.flip()
 
-                if not coins:
+                # Win condition for level
+                if not coins and game_active:
                     player.move_channel.stop()
                     level_idx += 1
                     current_lives = player.lives
-                    if level_idx < len(LEVELS): end_screen(f"LEVEL {level_idx+1}", WHITE)
+                    if level_idx < len(LEVELS): 
+                        end_screen(f"LEVEL {level_idx+1}", WHITE)
                     level_running = False
 
+        # If we finished all levels
         if game_active:
             end_screen("YOU SURVIVED!", GOLD)
 
