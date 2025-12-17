@@ -14,9 +14,9 @@ MAP = [
     "#..BB...........BB......B..#",
     "#..BB..#..###..BB..######..#",
     "#......#....#......#.......#",
-    "#####.......#.........#####",
-    "#......#....#......#.......#",
-    "#..BB..######..BB......BB.##",
+    "#####..................#####",
+    "#...........#......#.......#",
+    "#..BB....####..BB......BB.##",
     "#..BB...........BB......BB.#",
     "#.####..##..##..####..##..##",
     "#......##....##....##......#",
@@ -29,6 +29,8 @@ ROWS = len(MAP)
 COLS = len(MAP[0])
 WIDTH = COLS * TILE_SIZE
 HEIGHT = ROWS * TILE_SIZE
+
+# ---------- INITIALIZE ----------
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Brawl Stars Style Maze")
@@ -45,6 +47,15 @@ player_img = pygame.transform.scale(player_img, (TILE_SIZE-10, TILE_SIZE-10))
 
 bush_img = pygame.image.load("img/bush.png").convert_alpha()
 bush_img = pygame.transform.scale(bush_img, (TILE_SIZE, TILE_SIZE))
+
+monster_img = pygame.image.load("img/ghost1.png").convert_alpha()
+monster_img = pygame.transform.scale(monster_img, (TILE_SIZE-10, TILE_SIZE-10))
+
+
+coin_img = pygame.image.load("img/coin.gif").convert_alpha()
+coin_img = pygame.transform.scale(coin_img, (16, 16))
+
+
 
 # ---------- CAMERA ----------
 class Camera:
@@ -99,7 +110,8 @@ class Player:
 # ---------- MONSTER ----------
 class Monster:
     def __init__(self, x, y):
-        self.rect = pygame.Rect(x, y, TILE_SIZE-10, TILE_SIZE-10)
+        self.image = monster_img
+        self.rect = self.image.get_rect(topleft=(x, y))
         self.speed = 2
         self.dir = random.choice([(1,0),(-1,0),(0,1),(0,-1)])
         self.timer = random.randint(30, 90)
@@ -115,7 +127,7 @@ class Monster:
                 self.timer = random.randint(30, 90)
             dx, dy = self.dir
 
-        self.move(dx*self.speed, dy*self.speed, walls)
+        self.move(dx * self.speed, dy * self.speed, walls)
 
     def move(self, dx, dy, walls):
         self.rect.x += dx
@@ -128,7 +140,8 @@ class Monster:
                 self.rect.y -= dy
 
     def draw(self, surf):
-        pygame.draw.rect(surf, MONSTER_COLOR, self.rect, border_radius=8)
+        surf.blit(self.image, self.rect)
+
 
 # ---------- MAP ----------
 def draw_map(surf):
