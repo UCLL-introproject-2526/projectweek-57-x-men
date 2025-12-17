@@ -149,6 +149,13 @@ def draw_map(surf):
                 coins.append(pygame.Rect(rect.centerx-6, rect.centery-6, 12, 12))
 
     return walls, bushes, coins
+def spawn_player_in_random_bush(player, bushes):
+    if not bushes:
+        return
+    b = random.choice(bushes)
+    player.rect.center = b.center
+    player.hidden = True
+
 
 # ---------- MAIN ----------
 def main():
@@ -167,6 +174,7 @@ def main():
     player, monsters, camera, game_over, win = reset_game()
     base_surface = pygame.Surface((WIDTH, HEIGHT))
     walls, bushes, coins = draw_map(base_surface)
+    spawn_player_in_random_bush(player, bushes)
     total_coins = len(coins)
     font = pygame.font.SysFont(None, 36)
 
@@ -182,7 +190,9 @@ def main():
                 if play_again_btn.collidepoint(e.pos):
                     player, monsters, camera, game_over, win = reset_game()
                     walls, bushes, coins = draw_map(base_surface)
+                    spawn_player_in_random_bush(player, bushes)
                     total_coins = len(coins)
+
 
         keys = pygame.key.get_pressed()
         base_surface.fill((0,0,0))
