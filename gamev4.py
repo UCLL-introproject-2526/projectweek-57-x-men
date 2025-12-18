@@ -37,7 +37,7 @@ LEVELS = [
         "#......BB......BB......BB...#",
         "####..######..######..####..#",
         "#......#......#......#......#",
-        "#.######..####..######..##..#",
+        "#....###...######...##..##..#",
         "#......BB......BB......BB..##",
         "#..##....####....##....##.#.#",
         "#..BB....####....BB....#..#.#",
@@ -89,8 +89,11 @@ def load_img(path, size, color):
         surf = pygame.Surface(size); surf.fill(color); return surf
 
 player_img = load_img("project/img/player.gif", (30, 30), (0, 255, 0))
+player_img_right = player_img
+player_img_left = pygame.transform.flip(player_img, True, False)
+
 bush_img = load_img("project/img/bush.png", (40, 40), (0, 100, 0))
-ghost_img = load_img("project/img/ghost.png", (30, 30), (180, 180, 255))
+ghost_img = load_img("project/img/ghost1.png", (30, 30), (180, 180, 255))
 menu_bg = load_img("project/img/Final_poster.png", (WIDTH, HEIGHT), (20, 20, 20))
 
 class Camera:
@@ -119,21 +122,35 @@ class Player:
         self.speed = 4
         self.health = MAX_HEALTH
         self.is_hidden = False
+        self.facing_right = False
 
     def update(self, walls, bushes):
         keys = pygame.key.get_pressed()
         dx = dy = 0
-        if keys[pygame.K_LEFT] or keys[pygame.K_a]: dx = -self.speed
-        if keys[pygame.K_RIGHT] or keys[pygame.K_d]: dx = self.speed
-        if keys[pygame.K_UP] or keys[pygame.K_w]: dy = -self.speed
-        if keys[pygame.K_DOWN] or keys[pygame.K_s]: dy = self.speed
+        if keys[pygame.K_LEFT] or keys[pygame.K_a]: 
+            dx = -self.speed
+            self.facing_right = True
 
+        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+            dx = self.speed
+            self.facing_right = False
+
+        if keys[pygame.K_UP] or keys[pygame.K_w]: 
+            dy = -self.speed
+
+        if keys[pygame.K_DOWN] or keys[pygame.K_s]: 
+            dy = self.speed
+        
+
+        # Horizontal collision
         self.rect.x += dx
         for w in walls:
             if self.rect.colliderect(w):
                 if dx > 0: self.rect.right = w.left
                 if dx < 0: self.rect.left = w.right
 
+
+        # Vertical collision
         self.rect.y += dy
         for w in walls:
             if self.rect.colliderect(w):
@@ -243,8 +260,14 @@ def main_game():
             
             # Draw player (with hiding effect)
             p_rect_shaken = camera.apply(player.rect)
-            p_img = player_img.copy()
-            if player.is_hidden: p_img.set_alpha(128)
+
+            # Choose player image based on facing direction
+            p_img = player_img_right if player.facing_right else player_img_left
+            p_img = p_img.copy()
+
+            if player.is_hidden: 
+                p_img.set_alpha(128)
+
             screen.blit(p_img, p_rect_shaken)
 
             draw_ui(screen, player.health)
