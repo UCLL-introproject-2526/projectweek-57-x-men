@@ -49,19 +49,19 @@ LEVELS = [
     ],
     [
         "#############################",
-        "#..........####............##",
+        "#....BB....####............##",
         "#.##..#..#..##..###..###....#",
-        "#.#BB....#......#....BB#....#",
+        "#.#BB....#...B..#....BB#....#",
         "#.#....#.##.##.##.#.#..#....#",
         "#.#..#..............#......##",
         "#.......###....###..#....#..#",
-        "#.........BBBB..............#",
-        "#..........BBBB.............#",
+        "#.........BBBB............BB#",
+        "#..........BBBB............B#",
         "#.#..#..###....###..#..#...##",
         "#.#..#..............#..#....#",
         "#.#..###.##..#..#.###..#.#..#",
         "#.BBB....#......#....BB#....#",
-        "#...##..#..##....#..#.#.....#",
+        "#...##..#..##..B.#..#.#.....#",
         "#############################",
     ]
 ]
@@ -203,11 +203,19 @@ def get_level_data(level_map, level_idx):
             else:
                 floors.append(r)
                 if char == 'B': bushes.append(r)
-                elif char == '.' and random.random() < 0.08:
+                elif char == '.' and random.random() < 0.06: # 6% chance for coin
                     coins.append(pygame.Rect(r.centerx-5, r.centery-5, 10, 10))
     
     spawn = random.choice(bushes).topleft if bushes else (40, 40)
     return walls, bushes, coins, floors, spawn
+
+def text_screen(text, color, font_size):
+    font = pygame.font.SysFont(None, font_size)
+    screen.fill((0, 0, 0))
+    label = font.render(text, True, color)
+    screen.blit(label, label.get_rect(center=(WIDTH // 2, HEIGHT // 2)))
+    pygame.display.flip()
+    pygame.time.delay(2000)
 
 # ---------------- 5. MAIN LOOP ----------------
 def main_game():
@@ -242,11 +250,17 @@ def main_game():
             # Camera Update
             camera.update(is_touching_monster)
 
-            if player.health <= 0: return # Dead
+            # Dead
+            if player.health <= 0: 
+                text_screen("GAME OVER!", RED , 80)
+                 
 
             for c in coins[:]:
                 if player.rect.colliderect(c): coins.remove(c)
-            if not coins: level_running = False; level_idx += 1
+            if not coins: 
+                text_screen(f"Level {level_idx+2}", WHITE, 60)
+                level_running = False
+                level_idx += 1
 
             # Drawing
             screen.fill((10, 10, 10))
