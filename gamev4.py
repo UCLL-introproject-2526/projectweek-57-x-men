@@ -74,7 +74,7 @@ pygame.display.set_caption("Horror Maze - Camera Shake Edition")
 clock = pygame.time.Clock()
 
 # Colors
-FLOOR_COLOR = (35, 30, 25)
+FLOOR_COLOR = (245, 245, 220) 
 WALL_COLOR = (80, 60, 50)
 WHITE = (255, 255, 255)
 RED = (200, 20, 20)

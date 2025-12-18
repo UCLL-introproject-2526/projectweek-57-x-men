@@ -1,7 +1,6 @@
 import pygame
 import random
-
-
+import math
 
 pygame.init()
 
@@ -33,93 +32,70 @@ WIDTH = COLS * TILE_SIZE
 HEIGHT = ROWS * TILE_SIZE
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Brawl Stars Style Maze")
+pygame.display.set_caption("Maze Game with Animated Hearts")
 clock = pygame.time.Clock()
 
 # ---------- COLORS ----------
 FLOOR = (220, 200, 160)
 WALL = (120, 90, 60)
-MONSTER_COLOR = (200, 80, 80)
+WHITE = (255, 255, 255)
+HEART_RED = (200, 40, 40)
 
 # ---------- LOAD IMAGES ----------
+monster_img = pygame.transform.scale(
+    pygame.image.load("img/ghost1.png").convert_alpha(),
+    (TILE_SIZE - 10, TILE_SIZE - 10)
+)
 
+bush_img = pygame.transform.scale(
+    pygame.image.load("img/bush.png").convert_alpha(),
+    (TILE_SIZE, TILE_SIZE)
+)
 
+# ---------- HEART DRAWING ----------
+def draw_heart(surface, x, y, size, pulse):
+    s = int(size * pulse)
 
-# player_img = pygame.image.load("img/player.gif").convert_alpha()
-# player_img = pygame.transform.scale(player_img, (TILE_SIZE-10, TILE_SIZE-10))
+    left_circle = (x + s//3, y + s//3)
+    right_circle = (x + 2*s//3, y + s//3)
+    bottom_point = (x + s//2, y + s)
 
-# player_img_2 = pygame.image.load("img/player_walk_2.png").convert_alpha()
-# player_img_2 = pygame.transform.scale(player_img, (TILE_SIZE-10, TILE_SIZE-10))
-
-monster_img = pygame.image.load("img/ghost1.png").convert_alpha()
-monster_img = pygame.transform.scale(monster_img, (TILE_SIZE-10, TILE_SIZE-10))
-
-
-
-bush_img = pygame.image.load("img/bush.png").convert_alpha()
-bush_img = pygame.transform.scale(bush_img, (TILE_SIZE, TILE_SIZE))
-
-# ---------- CAMERA ----------
-class Camera:
-    def __init__(self):
-        self.shake = 0
-        self.zoom = 1.0
-
-    def apply(self, surface):
-        w, h = surface.get_size()
-        scaled = pygame.transform.scale(surface, (int(w*self.zoom), int(h*self.zoom)))
-        ox = random.randint(-self.shake, self.shake)
-        oy = random.randint(-self.shake, self.shake)
-        screen.blit(scaled, (ox, oy))
-
-
+    pygame.draw.circle(surface, HEART_RED, left_circle, s//3)
+    pygame.draw.circle(surface, HEART_RED, right_circle, s//3)
+    pygame.draw.polygon(surface, HEART_RED, [
+        (x, y + s//3),
+        (x + s, y + s//3),
+        bottom_point
+    ])
 
 # ---------- PLAYER ----------
 class Player:
     def __init__(self):
-        self.loade_frames()
-        self.image = self.idle_frame_left[0]
-        #self.rect = self.image.get_rect(topleft=(TILE_SIZE*2, TILE_SIZE*2))
-        self.rect=self.image.get_rect(
-            topleft=(TILE_SIZE*2+5, TILE_SIZE*2+5))# track the positon of the player
-        
-        self.speed = 4
-        self.hidden = False
-        self.health = 100
+        self.load_frames()
+        self.image = self.idle_left[0]
+        self.rect = self.image.get_rect(topleft=(TILE_SIZE*2+5, TILE_SIZE*2+5))
+        self.hitbox = self.rect.inflate(-12, -12)
 
-        # Smaller hitbox for smoother wall sliding (prevents edge sticking)
-        self.hitbox = self.rect.copy()
-        self.hitbox.inflate_ip(-12, -12)  # tweak: -8 (less), -16 (more)
+        self.speed = 4
+        self.health = 5
+        self.hidden = False
 
         self.facing_right = True
-
-        # Animation control
-        self.frame_index = 0
-        self.last_update = 0
-        self.animation_delay = 150  # ms
+        self.frame = 0
+        self.last_anim = 0
+        self.anim_delay = 150
         self.moving = False
 
-    def loade_frames(self):# loade all the image 
-
-        self.idle_frame_left=[
-            pygame.image.load("img/player_walk_1.png").convert_alpha()]# get not moving image
-        
-        self.walking_frame_left=[
-                pygame.image.load("img/player_walk_1.png").convert_alpha(),# load the image that is moving
-                pygame.image.load("img/player_walk_2.png").convert_alpha()]
-        
-
-        self.idle_frame_right = [
-        pygame.transform.flip(frame, True, False)
-        for frame in self.idle_frame_left
+    def load_frames(self):
+        self.idle_left = [
+            pygame.image.load("img/player_walk_1.png").convert_alpha()
         ]
-
-
-        self.walking_frame_right = [
-        pygame.transform.flip(frame, True, False)
-        for frame in self.walking_frame_left
+        self.walk_left = [
+            pygame.image.load("img/player_walk_1.png").convert_alpha(),
+            pygame.image.load("img/player_walk_2.png").convert_alpha()
         ]
-
+        self.idle_right = [pygame.transform.flip(f, True, False) for f in self.idle_left]
+        self.walk_right = [pygame.transform.flip(f, True, False) for f in self.walk_left]
 
     def update(self, keys, walls):
         dx = dy = 0
@@ -129,16 +105,13 @@ class Player:
             dx -= self.speed
             self.facing_right = False
             self.moving = True
-
         if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
             dx += self.speed
             self.facing_right = True
             self.moving = True
-
         if keys[pygame.K_w] or keys[pygame.K_UP]:
             dy -= self.speed
             self.moving = True
-
         if keys[pygame.K_s] or keys[pygame.K_DOWN]:
             dy += self.speed
             self.moving = True
@@ -147,58 +120,41 @@ class Player:
         self.animate()
 
     def move(self, dx, dy, walls):
-        # Move X
         self.hitbox.x += dx
         for w in walls:
             if self.hitbox.colliderect(w):
-                if dx > 0:
-                    self.hitbox.right = w.left
-                elif dx < 0:
-                    self.hitbox.left = w.right
+                if dx > 0: self.hitbox.right = w.left
+                if dx < 0: self.hitbox.left = w.right
 
-        # Move Y
         self.hitbox.y += dy
         for w in walls:
             if self.hitbox.colliderect(w):
-                if dy > 0:
-                    self.hitbox.bottom = w.top
-                elif dy < 0:
-                    self.hitbox.top = w.bottom
+                if dy > 0: self.hitbox.bottom = w.top
+                if dy < 0: self.hitbox.top = w.bottom
 
-        # Keep sprite rect centered on hitbox
-        self.rect.center = self.hitbox.center 
-
+        self.rect.center = self.hitbox.center
 
     def animate(self):
-        now= pygame.time.get_ticks()
-        if now - self.last_update > self.animation_delay:
-            self.last_update = now
-            self.frame_index += 1
+        now = pygame.time.get_ticks()
+        if now - self.last_anim > self.anim_delay:
+            self.last_anim = now
+            self.frame += 1
 
-        if self.moving:
-            frames = (
-                self.walking_frame_right
-                if self.facing_right
-                else self.walking_frame_left
-            )
-        else:
-            frames = (
-                self.idle_frame_right
-                if self.facing_right
-                else self.idle_frame_left
-            )
+        frames = (
+            self.walk_right if self.moving and self.facing_right else
+            self.walk_left if self.moving else
+            self.idle_right if self.facing_right else
+            self.idle_left
+        )
 
-        self.frame_index %= len(frames)
-        self.image = frames[self.frame_index]
-
+        self.frame %= len(frames)
+        self.image = frames[self.frame]
 
     def draw(self, surf):
-         if self.hidden:
-             img = self.image.copy()
-             img.set_alpha(120)
-             surf.blit(img, self.rect)
-         else:
-             surf.blit(self.image, self.rect)
+        img = self.image.copy()
+        if self.hidden:
+            img.set_alpha(120)
+        surf.blit(img, self.rect)
 
 # ---------- MONSTER ----------
 class Monster:
@@ -206,7 +162,6 @@ class Monster:
         self.image = monster_img
         self.rect = self.image.get_rect(topleft=(x, y))
         self.speed = 2
-        self.hidden = False
         self.dir = random.choice([(1,0),(-1,0),(0,1),(0,-1)])
         self.timer = random.randint(30, 90)
 
@@ -234,64 +189,33 @@ class Monster:
                 self.rect.y -= dy
 
     def draw(self, surf):
-        if self.hidden:
-            img = self.image.copy()
-            img.set_alpha(120)
-            surf.blit(img, self.rect)
-        else:
-            surf.blit(self.image, self.rect)
+        surf.blit(self.image, self.rect)
 
 # ---------- MAP ----------
-def draw_map(surf):
-     walls, bushes, coins = [], [], []
-
-     for y, row in enumerate(MAP):
-         for x, tile in enumerate(row):
-             rect = pygame.Rect(x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE)
-             pygame.draw.rect(surf, FLOOR, rect)
-
-             if tile == '#':
-                 pygame.draw.rect(surf, WALL, rect)
-                 walls.append(rect)
-             elif tile == 'B':
-                 surf.blit(bush_img, rect.topleft)
-                 bushes.append(rect)
-             elif tile == '.' and random.random() < 0.04:
-                 coins.append(pygame.Rect(rect.centerx-6, rect.centery-6, 12, 12))
-
-     return walls, bushes, coins
-
-def draw_map_only(surf):
+def build_map(surf):
+    walls, bushes, coins = [], [], []
     for y, row in enumerate(MAP):
-        for x, tile in enumerate(row):
-            rect = pygame.Rect(x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE)
-            pygame.draw.rect(surf, FLOOR, rect)
-
-            if tile == '#':
-                pygame.draw.rect(surf, WALL, rect)
-            elif tile == 'B':
-                surf.blit(bush_img, rect.topleft)
-
+        for x, t in enumerate(row):
+            r = pygame.Rect(x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE)
+            pygame.draw.rect(surf, FLOOR, r)
+            if t == '#':
+                pygame.draw.rect(surf, WALL, r)
+                walls.append(r)
+            elif t == 'B':
+                surf.blit(bush_img, r.topleft)
+                bushes.append(r)
+            elif t == '.' and random.random() < 0.04:
+                coins.append(pygame.Rect(r.centerx-6, r.centery-6, 12, 12))
+    return walls, bushes, coins
 
 # ---------- MAIN ----------
 def main():
-    def reset_game():
-        player = Player()
-        monsters = [
-            Monster(TILE_SIZE*10, TILE_SIZE*5),
-            Monster(TILE_SIZE*20, TILE_SIZE*10)
-        ]
-        camera = Camera()
-        walls, bushes, coins = draw_map(base_surface)
-        game_over = False
-        win = False
-        return player, monsters, camera, walls, bushes, coins, game_over, win
+    base = pygame.Surface((WIDTH, HEIGHT))
+    font = pygame.font.SysFont(None, 32)
 
-    base_surface = pygame.Surface((WIDTH, HEIGHT))
-    font = pygame.font.SysFont(None, 36)
-    play_again_btn = pygame.Rect(WIDTH//2-100, HEIGHT//2+40, 200, 40)
-
-    player, monsters, camera, walls, bushes, coins, game_over, win = reset_game()
+    player = Player()
+    monsters = [Monster(400, 200), Monster(700, 400)]
+    walls, bushes, coins = build_map(base)
     total_coins = len(coins)
 
     running = True
@@ -301,88 +225,47 @@ def main():
             if e.type == pygame.QUIT:
                 running = False
 
-            if e.type == pygame.MOUSEBUTTONDOWN and (game_over or win):
-                if play_again_btn.collidepoint(e.pos):
-                    player, monsters, camera, walls, bushes, coins, game_over, win = reset_game()
-                    total_coins = len(coins)
-
         keys = pygame.key.get_pressed()
-        
-        # Clear the screen
-        base_surface.fill((0, 0, 0))
-        
-        # Draw everything in the correct order:
-        # 1. First draw the map
-        draw_map_only(base_surface)
-        
-        # 2. Draw coins
-        for coin in coins:
-            pygame.draw.circle(base_surface, (255, 215, 0), coin.center, 6)
-        
-        # 3. Draw monsters
+        player.update(keys, walls)
+        player.hidden = any(player.rect.colliderect(b) for b in bushes)
+
         for m in monsters:
-            m.draw(base_surface)
-        
-        # 4. Draw player (on top of everything)
-        player.draw(base_surface)  # Use the draw method instead of blit directly
+            m.update(walls, player)
+            if m.rect.colliderect(player.rect):
+                player.health -= 1
+                player.rect.topleft = (TILE_SIZE*2, TILE_SIZE*2)
 
-        if not game_over and not win:
-            # Update player position
-            player.update(keys, walls)
-            player.hidden = any(player.rect.colliderect(b) for b in bushes)
+        for c in coins[:]:
+            if player.rect.colliderect(c):
+                coins.remove(c)
 
-            # Check coin collection
-            for coin in coins[:]:
-                if player.rect.colliderect(coin):
-                    coins.remove(coin)
+        if player.health <= 0:
+            running = False
 
-            # Update monsters
-            for m in monsters:
-                m.update(walls, player)
-                if m.rect.colliderect(player.rect):
-                    player.health -= 0.4
-                    camera.shake = 8
-                    camera.zoom = 1.1
+        base.fill((0,0,0))
+        build_map(base)
+        for c in coins:
+            pygame.draw.circle(base, (255,215,0), c.center, 6)
+        for m in monsters:
+            m.draw(base)
+        player.draw(base)
 
-            if player.health <= 0:
-                game_over = True
-                camera.shake = 0
+        # ❤️ ANIMATED HEARTS
+        time = pygame.time.get_ticks() / 400
+        pulse = 1 + 0.1 * math.sin(time)
 
-            if len(coins) == 0:
-                win = True
+        for i in range(player.health):
+            draw_heart(base, 20 + i*32, 20, 22, pulse)
 
-        # Camera smoothing
-        camera.shake = max(0, camera.shake - 1)
-        camera.zoom += (1.0 - camera.zoom) * 0.1
+        base.blit(
+            font.render(f"Coins: {total_coins - len(coins)}/{total_coins}", True, WHITE),
+            (20, 55)
+        )
 
-        # UI
-        # Health bar
-        pygame.draw.rect(base_surface, (200, 0, 0), (20, 20, 200, 16))
-        pygame.draw.rect(base_surface, (0, 200, 0), (20, 20, 2 * player.health, 16))
-
-        # Coin counter
-        base_surface.blit(font.render(
-            f"Coins: {total_coins - len(coins)}/{total_coins}",
-            True, (255, 255, 255)),
-            (20, 45))
-
-        # Game over/win screen
-        if game_over or win:
-            msg = "GAME OVER" if game_over else "YOU WIN!"
-            base_surface.blit(font.render(msg, True, (255, 255, 0)), 
-                            (WIDTH//2 - 80, HEIGHT//2 - 40))
-            pygame.draw.rect(base_surface, (50, 150, 50), play_again_btn, border_radius=8)
-            base_surface.blit(font.render("PLAY AGAIN", True, (255, 255, 255)),
-                            (play_again_btn.x + 30, play_again_btn.y + 8))
-
-        # Apply camera effects and update display
-        screen.fill((0, 0, 0))
-        camera.apply(base_surface)
+        screen.blit(base, (0,0))
         pygame.display.flip()
 
     pygame.quit()
-
-
 
 if __name__ == "__main__":
     main()
