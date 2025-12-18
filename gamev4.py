@@ -177,7 +177,7 @@ class Monster:
             if self.timer <= 0:
                 self.dir = random.choice([(1,0), (-1,0), (0,1), (0,-1)])
                 self.timer = random.randint(40, 100)
-            self.timer -= 1
+            self.timer -= 1.5
             dx, dy = self.dir
 
         self.move(dx * self.speed, dy * self.speed, walls)
