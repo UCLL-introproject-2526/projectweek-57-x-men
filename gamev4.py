@@ -32,25 +32,25 @@ LEVELS = [
     ],
     [
         "#############################",
-        "#..BB....####....BB....####.#",
-        "#..##....####....##....####.#",
+        "#..BB....#..#....BB....#..#.#",
+        "#..##....##.#....##....##...#",
         "#......BB......BB......BB...#",
         "####..######..######..####..#",
         "#......#......#......#......#",
         "#....###...######...##..##..#",
-        "#......BB......BB......BB..##",
+        "#......BB..............BB..##",
         "#..##....####....##....##.#.#",
-        "#..BB....####....BB....#..#.#",
-        "#......BB......BB......BB...#",
-        "####..######..######..####..#",
-        "#......#......#......#...#..#",
-        "#..BB......BB......BB.......#",
+        "#..B........#....BB....#..#.#",
+        "#.......B...................#",
+        "####..######..######.B##....#",
+        "#......#.....B#......#...#..#",
+        "#..BB.....#........BB....#..#",
         "#############################",
     ],
     [
         "#############################",
-        "#....BB....####............##",
-        "#.##..#..#..##..###..###....#",
+        "#....BB....#..#............##",
+        "#.##..#..#.#.#..###..###....#",
         "#.#BB....#...B..#....BB#....#",
         "#.#....#.##.##.##.#.#..#....#",
         "#.#..#..............#......##",
@@ -114,6 +114,9 @@ class Camera:
         """Returns a new rect moved by the camera offset."""
         return rect.move(self.offset_x, self.offset_y)
 
+restart_button = pygame.Rect(WIDTH//2 - 110, HEIGHT//2 + 40, 220, 55)
+quit_button = pygame.Rect(WIDTH//2 - 110, HEIGHT//2 + 110, 220, 55)
+
 # ---------------- 3. CLASSES ----------------
 class Player:
     def __init__(self, pos):
@@ -174,7 +177,7 @@ class Monster:
             if self.timer <= 0:
                 self.dir = random.choice([(1,0), (-1,0), (0,1), (0,-1)])
                 self.timer = random.randint(40, 100)
-            self.timer -= 1
+            self.timer -= 1.5
             dx, dy = self.dir
 
         self.move(dx * self.speed, dy * self.speed, walls)
@@ -209,13 +212,58 @@ def get_level_data(level_map, level_idx):
     spawn = random.choice(bushes).topleft if bushes else (40, 40)
     return walls, bushes, coins, floors, spawn
 
-def text_screen(text, color, font_size):
-    font = pygame.font.SysFont(None, font_size)
-    screen.fill((0, 0, 0))
-    label = font.render(text, True, color)
-    screen.blit(label, label.get_rect(center=(WIDTH // 2, HEIGHT // 2)))
-    pygame.display.flip()
-    pygame.time.delay(2000)
+def level_screen(level_number):
+    start_time = pygame.time.get_ticks()
+
+    while pygame.time.get_ticks() - start_time < 2000:
+        clock.tick(60)
+        screen.fill((0, 0, 0))
+
+        font = pygame.font.SysFont(None, 70)
+        text = font.render(f"LEVEL {level_number}", True, WHITE)
+        screen.blit(text, text.get_rect(center=(WIDTH//2, HEIGHT//2)))
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+
+def game_over_screen():
+    while True:
+        clock.tick(60)
+        screen.fill((0, 0, 0))
+
+        font_big = pygame.font.SysFont(None, 80)
+        font_small = pygame.font.SysFont(None, 36)
+
+        title = font_big.render("GAME OVER", True, RED)
+        screen.blit(title, title.get_rect(center=(WIDTH//2, HEIGHT//2 - 80)))
+
+        pygame.draw.rect(screen, GREEN, restart_button, border_radius=10)
+        pygame.draw.rect(screen, RED, quit_button, border_radius=10)
+
+        screen.blit(font_small.render("RESTART", True, WHITE),
+                    restart_button.move(60, 15))
+        screen.blit(font_small.render("QUIT", True, WHITE),
+                    quit_button.move(80, 15))
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if restart_button.collidepoint(event.pos):
+                    return "restart"
+                if quit_button.collidepoint(event.pos):
+                    pygame.quit()
+                    sys.exit()
+
 
 # ---------------- 5. MAIN LOOP ----------------
 def main_game():
@@ -224,6 +272,8 @@ def main_game():
     camera = Camera()
 
     while level_idx < len(LEVELS):
+        level_screen(level_idx + 1)
+        
         walls, bushes, coins, floors, spawn = get_level_data(LEVELS[level_idx], level_idx)
         
         if not player: player = Player(spawn)
@@ -252,13 +302,14 @@ def main_game():
 
             # Dead
             if player.health <= 0: 
-                text_screen("GAME OVER!", RED , 80)
+                choice = game_over_screen()
+                if choice == "restart":
+                    return  # Exit main_game() and restart from menu
                  
 
             for c in coins[:]:
                 if player.rect.colliderect(c): coins.remove(c)
             if not coins: 
-                text_screen(f"Level {level_idx+2}", WHITE, 60)
                 level_running = False
                 level_idx += 1
 
@@ -297,7 +348,9 @@ def main_menu():
         pygame.display.flip()
         for event in pygame.event.get():
             if event.type == pygame.QUIT: pygame.quit(); sys.exit()
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE: main_game()
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                main_game()
+
 
 if __name__ == "__main__":
     main_menu()

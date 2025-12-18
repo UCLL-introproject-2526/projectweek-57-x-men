@@ -1,0 +1,10 @@
+{
+  "name": "Horror Maze",
+  "entry": "gamev3.py",
+  "type": "pygame",
+  "python": "3.11",
+  "orientation": "landscape",
+  "resolution": [1120, 600],
+  "assets": ["img"],
+  "description": "A stealth-based horror maze game with monsters, hiding mechanics, and camera shake."
+}
