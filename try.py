@@ -1,8 +1,6 @@
 import pygame
 import random
 
-
-
 pygame.init()
 
 # ---------- SETTINGS ----------
@@ -15,9 +13,9 @@ MAP = [
     "#.####..##..##..####..####.#",
     "#..BB...........BB......B..#",
     "#..BB..#..###..BB..######..#",
-    "#......#...........#.......#",
-    "#####.......#.........######",
     "#......#....#......#.......#",
+    "#####.......#.........######",
+    "#......#...........#.......#",
     "#..BB..######..BB......BB.##",
     "#..BB...........BB......BB.#",
     "#.####..##..##..####..##..##",
@@ -42,19 +40,14 @@ WALL = (120, 90, 60)
 MONSTER_COLOR = (200, 80, 80)
 
 # ---------- LOAD IMAGES ----------
-
-
-
-# player_img = pygame.image.load("img/player.gif").convert_alpha()
-# player_img = pygame.transform.scale(player_img, (TILE_SIZE-10, TILE_SIZE-10))
-
-# player_img_2 = pygame.image.load("img/player_walk_2.png").convert_alpha()
-# player_img_2 = pygame.transform.scale(player_img, (TILE_SIZE-10, TILE_SIZE-10))
-
-monster_img = pygame.image.load("img/ghost1.png").convert_alpha()
-monster_img = pygame.transform.scale(monster_img, (TILE_SIZE-10, TILE_SIZE-10))
-
-
+# Load walking frames
+player_walk_right = [
+    pygame.image.load("img/player_walk_0.png").convert_alpha(),
+    pygame.image.load("img/player_walk_1.png").convert_alpha(),
+    pygame.image.load("img/player_walk_2.png").convert_alpha()
+]
+player_walk_right = [pygame.transform.scale(img, (TILE_SIZE-10, TILE_SIZE-10)) for img in player_walk_right]
+player_walk_left = [pygame.transform.flip(img, True, False) for img in player_walk_right]
 
 bush_img = pygame.image.load("img/bush.png").convert_alpha()
 bush_img = pygame.transform.scale(bush_img, (TILE_SIZE, TILE_SIZE))
@@ -72,79 +65,58 @@ class Camera:
         oy = random.randint(-self.shake, self.shake)
         screen.blit(scaled, (ox, oy))
 
-
-
 # ---------- PLAYER ----------
 class Player:
     def __init__(self):
-        self.loade_frames()
-        self.image = self.idle_frame_left[0]
-        #self.rect = self.image.get_rect(topleft=(TILE_SIZE*2, TILE_SIZE*2))
-        self.rect=self.image.get_rect(
-            topleft=(TILE_SIZE*2+5, TILE_SIZE*2+5))# track the positon of the player
-        
+        self.image = player_walk_right[0]
+        self.rect = self.image.get_rect(topleft=(TILE_SIZE*2, TILE_SIZE*2))
         self.speed = 4
         self.hidden = False
         self.health = 100
 
-        # Smaller hitbox for smoother wall sliding (prevents edge sticking)
         self.hitbox = self.rect.copy()
-        self.hitbox.inflate_ip(-12, -12)  # tweak: -8 (less), -16 (more)
+        self.hitbox.inflate_ip(-12, -12)
 
         self.facing_right = True
 
-        # Animation control
+        # Animation
+        self.walk_frames_right = player_walk_right
+        self.walk_frames_left = player_walk_left
         self.frame_index = 0
-        self.last_update = 0
-        self.animation_delay = 150  # ms
-        self.moving = False
-
-    def loade_frames(self):# loade all the image 
-
-        self.idle_frame_left=[
-            pygame.image.load("img/player_walk_1.png").convert_alpha()]# get not moving image
-        
-        self.walking_frame_left=[
-                pygame.image.load("img/player_walk_1.png").convert_alpha(),# load the image that is moving
-                pygame.image.load("img/player_walk_2.png").convert_alpha()]
-        
-
-        self.idle_frame_right = [
-        pygame.transform.flip(frame, True, False)
-        for frame in self.idle_frame_left
-        ]
-
-
-        self.walking_frame_right = [
-        pygame.transform.flip(frame, True, False)
-        for frame in self.walking_frame_left
-        ]
-
+        self.animation_speed = 0.15
 
     def update(self, keys, walls):
         dx = dy = 0
-        self.moving = False
+        moving = False
 
         if keys[pygame.K_a] or keys[pygame.K_LEFT]:
             dx -= self.speed
-            self.facing_right = False
-            self.moving = True
+            self.facing_right = True
+            moving = True
 
         if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
             dx += self.speed
-            self.facing_right = True
-            self.moving = True
+            self.facing_right = False
+            moving = True
 
         if keys[pygame.K_w] or keys[pygame.K_UP]:
             dy -= self.speed
-            self.moving = True
+            moving = True
 
         if keys[pygame.K_s] or keys[pygame.K_DOWN]:
             dy += self.speed
-            self.moving = True
+            moving = True
 
         self.move(dx, dy, walls)
-        self.animate()
+
+        # Animate walking
+        if moving:
+            self.frame_index += self.animation_speed
+            if self.frame_index >= len(self.walk_frames_right):
+                self.frame_index = 0
+            self.image = self.walk_frames_right[int(self.frame_index)] if self.facing_right else self.walk_frames_left[int(self.frame_index)]
+        else:
+            self.image = self.walk_frames_right[0] if self.facing_right else self.walk_frames_left[0]
 
     def move(self, dx, dy, walls):
         # Move X
@@ -168,45 +140,19 @@ class Player:
         # Keep sprite rect centered on hitbox
         self.rect.center = self.hitbox.center 
 
-
-    def animate(self):
-        now= pygame.time.get_ticks()
-        if now - self.last_update > self.animation_delay:
-            self.last_update = now
-            self.frame_index += 1
-
-        if self.moving:
-            frames = (
-                self.walking_frame_right
-                if self.facing_right
-                else self.walking_frame_left
-            )
-        else:
-            frames = (
-                self.idle_frame_right
-                if self.facing_right
-                else self.idle_frame_left
-            )
-
-        self.frame_index %= len(frames)
-        self.image = frames[self.frame_index]
-
-
     def draw(self, surf):
-         if self.hidden:
-             img = self.image.copy()
-             img.set_alpha(120)
-             surf.blit(img, self.rect)
-         else:
-             surf.blit(self.image, self.rect)
+        if self.hidden:
+            img = self.image.copy()
+            img.set_alpha(120)
+            surf.blit(img, self.rect)
+        else:
+            surf.blit(self.image, self.rect)
 
 # ---------- MONSTER ----------
 class Monster:
     def __init__(self, x, y):
-        self.image = monster_img
-        self.rect = self.image.get_rect(topleft=(x, y))
+        self.rect = pygame.Rect(x, y, TILE_SIZE-10, TILE_SIZE-10)
         self.speed = 2
-        self.hidden = False
         self.dir = random.choice([(1,0),(-1,0),(0,1),(0,-1)])
         self.timer = random.randint(30, 90)
 
@@ -234,34 +180,12 @@ class Monster:
                 self.rect.y -= dy
 
     def draw(self, surf):
-        if self.hidden:
-            img = self.image.copy()
-            img.set_alpha(120)
-            surf.blit(img, self.rect)
-        else:
-            surf.blit(self.image, self.rect)
+        pygame.draw.rect(surf, MONSTER_COLOR, self.rect, border_radius=8)
 
 # ---------- MAP ----------
 def draw_map(surf):
-     walls, bushes, coins = [], [], []
+    walls, bushes, coins = [], [], []
 
-     for y, row in enumerate(MAP):
-         for x, tile in enumerate(row):
-             rect = pygame.Rect(x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE)
-             pygame.draw.rect(surf, FLOOR, rect)
-
-             if tile == '#':
-                 pygame.draw.rect(surf, WALL, rect)
-                 walls.append(rect)
-             elif tile == 'B':
-                 surf.blit(bush_img, rect.topleft)
-                 bushes.append(rect)
-             elif tile == '.' and random.random() < 0.04:
-                 coins.append(pygame.Rect(rect.centerx-6, rect.centery-6, 12, 12))
-
-     return walls, bushes, coins
-
-def draw_map_only(surf):
     for y, row in enumerate(MAP):
         for x, tile in enumerate(row):
             rect = pygame.Rect(x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE)
@@ -269,9 +193,14 @@ def draw_map_only(surf):
 
             if tile == '#':
                 pygame.draw.rect(surf, WALL, rect)
+                walls.append(rect)
             elif tile == 'B':
                 surf.blit(bush_img, rect.topleft)
+                bushes.append(rect)
+            elif tile == '.' and random.random() < 0.04:
+                coins.append(pygame.Rect(rect.centerx-6, rect.centery-6, 12, 12))
 
+    return walls, bushes, coins
 
 # ---------- MAIN ----------
 def main():
@@ -282,17 +211,16 @@ def main():
             Monster(TILE_SIZE*20, TILE_SIZE*10)
         ]
         camera = Camera()
-        walls, bushes, coins = draw_map(base_surface)
         game_over = False
         win = False
-        return player, monsters, camera, walls, bushes, coins, game_over, win
+        return player, monsters, camera, game_over, win
 
+    player, monsters, camera, game_over, win = reset_game()
     base_surface = pygame.Surface((WIDTH, HEIGHT))
+    walls, bushes, coins = draw_map(base_surface)
+    total_coins = len(coins)
     font = pygame.font.SysFont(None, 36)
     play_again_btn = pygame.Rect(WIDTH//2-100, HEIGHT//2+40, 200, 40)
-
-    player, monsters, camera, walls, bushes, coins, game_over, win = reset_game()
-    total_coins = len(coins)
 
     running = True
     while running:
@@ -300,43 +228,32 @@ def main():
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 running = False
-
             if e.type == pygame.MOUSEBUTTONDOWN and (game_over or win):
                 if play_again_btn.collidepoint(e.pos):
-                    player, monsters, camera, walls, bushes, coins, game_over, win = reset_game()
+                    player, monsters, camera, game_over, win = reset_game()
+                    walls, bushes, coins = draw_map(base_surface)
                     total_coins = len(coins)
 
         keys = pygame.key.get_pressed()
-        
-        # Clear the screen
-        base_surface.fill((0, 0, 0))
-        
-        # Draw everything in the correct order:
-        # 1. First draw the map
-        draw_map_only(base_surface)
-        
-        # 2. Draw coins
-        for coin in coins:
-            pygame.draw.circle(base_surface, (255, 215, 0), coin.center, 6)
-        
-        # 3. Draw monsters
-        for m in monsters:
-            m.draw(base_surface)
-        
-        # 4. Draw player (on top of everything)
-        player.draw(base_surface)  # Use the draw method instead of blit directly
+        base_surface.fill((0,0,0))
+        # Draw map but keep existing coins
+        for y, row in enumerate(MAP):
+            for x, tile in enumerate(row):
+                rect = pygame.Rect(x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                pygame.draw.rect(base_surface, FLOOR, rect)
+                if tile == '#':
+                    pygame.draw.rect(base_surface, WALL, rect)
+                elif tile == 'B':
+                    base_surface.blit(bush_img, rect.topleft)
 
         if not game_over and not win:
-            # Update player position
             player.update(keys, walls)
             player.hidden = any(player.rect.colliderect(b) for b in bushes)
 
-            # Check coin collection
             for coin in coins[:]:
                 if player.rect.colliderect(coin):
                     coins.remove(coin)
 
-            # Update monsters
             for m in monsters:
                 m.update(walls, player)
                 if m.rect.colliderect(player.rect):
@@ -346,43 +263,36 @@ def main():
 
             if player.health <= 0:
                 game_over = True
-                camera.shake = 0
-
             if len(coins) == 0:
                 win = True
 
-        # Camera smoothing
         camera.shake = max(0, camera.shake - 1)
         camera.zoom += (1.0 - camera.zoom) * 0.1
 
+        for coin in coins:
+            pygame.draw.circle(base_surface, (255,215,0), coin.center, 6)
+
+        for m in monsters:
+            m.draw(base_surface)
+        player.draw(base_surface)
+
         # UI
-        # Health bar
-        pygame.draw.rect(base_surface, (200, 0, 0), (20, 20, 200, 16))
-        pygame.draw.rect(base_surface, (0, 200, 0), (20, 20, 2 * player.health, 16))
+        pygame.draw.rect(base_surface, (200,0,0), (20,20,200,16))
+        pygame.draw.rect(base_surface, (0,200,0), (20,20,2*player.health,16))
+        base_surface.blit(font.render(f"Coins: {total_coins-len(coins)}/{total_coins}", True, (255,255,255)), (20,45))
 
-        # Coin counter
-        base_surface.blit(font.render(
-            f"Coins: {total_coins - len(coins)}/{total_coins}",
-            True, (255, 255, 255)),
-            (20, 45))
-
-        # Game over/win screen
         if game_over or win:
             msg = "GAME OVER" if game_over else "YOU WIN!"
-            base_surface.blit(font.render(msg, True, (255, 255, 0)), 
-                            (WIDTH//2 - 80, HEIGHT//2 - 40))
-            pygame.draw.rect(base_surface, (50, 150, 50), play_again_btn, border_radius=8)
-            base_surface.blit(font.render("PLAY AGAIN", True, (255, 255, 255)),
-                            (play_again_btn.x + 30, play_again_btn.y + 8))
+            base_surface.blit(font.render(msg, True, (255,255,0)), (WIDTH//2-80, HEIGHT//2-40))
+            pygame.draw.rect(base_surface, (50,150,50), play_again_btn, border_radius=8)
+            base_surface.blit(font.render("PLAY AGAIN", True, (255,255,255)),
+                              (play_again_btn.x+30, play_again_btn.y+8))
 
-        # Apply camera effects and update display
-        screen.fill((0, 0, 0))
+        screen.fill((0,0,0))
         camera.apply(base_surface)
         pygame.display.flip()
 
     pygame.quit()
-
-
 
 if __name__ == "__main__":
     main()

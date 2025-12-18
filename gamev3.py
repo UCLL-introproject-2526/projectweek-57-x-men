@@ -164,7 +164,7 @@ class Monster:
         self.speed = speed
         self.dir = random.choice([(1,0), (-1,0), (0,1), (0,-1)])
         self.change_dir_timer = 0
-
+        
     def update(self, player, walls, is_player_moving):
         # AI Logic: Chase if player moves and isn't hidden, otherwise Patrol
         if not player.is_hidden and is_player_moving:
