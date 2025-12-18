@@ -74,7 +74,7 @@ pygame.display.set_caption("Horror Maze - Camera Shake Edition")
 clock = pygame.time.Clock()
 
 # Colors
-FLOOR_COLOR = (35, 30, 25)
+FLOOR_COLOR = (220, 200, 160)
 WALL_COLOR = (80, 60, 50)
 WHITE = (255, 255, 255)
 RED = (200, 20, 20)
@@ -93,7 +93,7 @@ player_img_right = player_img
 player_img_left = pygame.transform.flip(player_img, True, False)
 
 bush_img = load_img("project/img/bush.png", (40, 40), (0, 100, 0))
-ghost_img = load_img("project/img/ghost1.png", (30, 30), (180, 180, 255))
+ghost_img = load_img("project/img/ghost1.png", (30, 30), (180, 180, 255))      
 menu_bg = load_img("project/img/Final_poster.png", (WIDTH, HEIGHT), (20, 20, 20))
 
 class Camera:
@@ -221,7 +221,7 @@ def main_game():
         if not player: player = Player(spawn)
         else: player.rect.topleft = spawn; player.health = MAX_HEALTH
 
-        monsters = [Monster(random.choice(floors).topleft, 2.0 + (level_idx * 0.5)) for _ in range(level_idx + 3)]
+        monsters = [Monster(random.choice(floors).topleft, 2.0 + (level_idx * 0.8)) for _ in range(level_idx + 3)]
         
         level_running = True
         while level_active := level_running:
@@ -236,7 +236,7 @@ def main_game():
             for m in monsters:
                 m.update(player, walls)
                 if m.rect.colliderect(player.rect) and not player.is_hidden:
-                    player.health -= 1.5 # Damage
+                    player.health -= 0.5 # Damage
                     is_touching_monster = True # Trigger Shake
             
             # Camera Update
