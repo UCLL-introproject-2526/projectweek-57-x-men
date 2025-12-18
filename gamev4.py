@@ -74,7 +74,7 @@ pygame.display.set_caption("Horror Maze - Camera Shake Edition")
 clock = pygame.time.Clock()
 
 # Colors
-FLOOR_COLOR = (35, 30, 25)
+FLOOR_COLOR = (220, 200, 160)
 WALL_COLOR = (80, 60, 50)
 WHITE = (255, 255, 255)
 RED = (200, 20, 20)
@@ -174,7 +174,7 @@ class Monster:
             if self.timer <= 0:
                 self.dir = random.choice([(1,0), (-1,0), (0,1), (0,-1)])
                 self.timer = random.randint(40, 100)
-            self.timer -= 1
+            self.timer -= 1.5
             dx, dy = self.dir
 
         self.move(dx * self.speed, dy * self.speed, walls)
