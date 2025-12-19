@@ -94,7 +94,7 @@ player_img_left = player_img
 player_img_right = pygame.transform.flip(player_img, True, False)
 
 bush_img = load_img("img/bush.png", (40, 40), (0, 100, 0))
-coin_img = load_img("img/coin.png", (10, 10), (255, 215, 0))    
+coin_img = load_img("img/coin.png", (30, 30), (255, 215, 0))    
 menu_bg = load_img("img/Final_poster.png", (WIDTH, HEIGHT), (20, 20, 20))
 
 
@@ -247,7 +247,9 @@ def get_level_data(level_map, level_idx):
                 floors.append(r)
                 if char == 'B': bushes.append(r)
                 elif char == '.' and random.random() < 0.05: # 5% chance for coin
-                    coins.append(pygame.Rect(r.centerx-5, r.centery-5, 10, 10))
+                    coin_rect = coin_img.get_rect(center=r.center)
+                    coins.append(coin_rect)
+
     
     spawn = random.choice(bushes).topleft if bushes else (40, 40)
     return walls, bushes, coins, floors, spawn
@@ -465,7 +467,8 @@ def main_game():
             for f in floors: pygame.draw.rect(screen, FLOOR_COLOR, camera.apply(f))
             for w in walls: pygame.draw.rect(screen, WALL_COLOR, camera.apply(w))
             for b in bushes: screen.blit(bush_img, camera.apply(b))
-            for c in coins: pygame.draw.circle(screen, GOLD, camera.apply(c).center, 6)
+            # for c in coins: pygame.draw.circle(screen, GOLD, camera.apply(c).center, 6)
+            for c in coins: screen.blit(coin_img, camera.apply(c))
             for m in monsters: screen.blit(m.image, camera.apply(m.rect))
             
             # Draw player (with hiding effect)
