@@ -96,6 +96,8 @@ player_img_right = pygame.transform.flip(player_img, True, False)
 bush_img = load_img("img/bush.png", (40, 40), (0, 100, 0))
 coin_img = load_img("img/coin.png", (30, 30), (255, 215, 0))    
 menu_bg = load_img("img/Final_poster.png", (WIDTH, HEIGHT), (20, 20, 20))
+health_pack_img = load_img("img/heart.png", (30, 30), (255, 0, 0))
+
 
 
 victory_music = pygame.mixer.Sound("sound/victory.mp3")
@@ -248,7 +250,7 @@ def get_level_data(level_map, level_idx):
                 if char == 'B': bushes.append(r)
                 elif char == '.' and random.random() < 0.05: # 5% chance for coin
                     coin_rect = coin_img.get_rect(center=r.center)
-                    coins.append(coin_rect)
+                    coins.append(coin_rect) # create coins
 
     
     spawn = random.choice(bushes).topleft if bushes else (40, 40)
@@ -396,6 +398,10 @@ def main_game():
         lvl_1_music.play(-1)
         
         walls, bushes, coins, floors, spawn = get_level_data(LEVELS[level_idx], level_idx)
+
+        total_coins = len(coins)
+        health_pack_spawned = False
+        health_pack = None
         
         if not player: player = Player(spawn)
         else: player.rect.topleft = spawn; player.health = MAX_HEALTH
@@ -436,7 +442,7 @@ def main_game():
             # Dead
             if player.health <= 0: 
                 lvl_1_music.stop()
-                play_end_animation()
+                # play_end_animation()
                 choice = game_over_screen()
                 if choice == "restart":
                     return  # Exit main_game() and restart from menu
@@ -446,6 +452,26 @@ def main_game():
                 if player.rect.colliderect(c): 
                     coin_sound.play()
                     coins.remove(c)
+
+                    # Spawn health pack at half coins
+                    if (not health_pack_spawned 
+                        and len(coins) <= total_coins // 2):
+
+                        spawn_tile = random.choice(floors)
+                        health_pack = pygame.Rect(
+                            spawn_tile.centerx - 15,
+                            spawn_tile.centery - 15,
+                            30,
+                            30
+                        )
+                        health_pack_spawned = True
+            
+            # Health pack collection
+            if health_pack and player.rect.colliderect(health_pack):
+                increase = player.health * 0.8
+                player.health = min(player.health + increase, MAX_HEALTH)
+                health_pack = None  # remove it
+
 
             if not coins:
                 level_running = False
@@ -470,6 +496,10 @@ def main_game():
             # for c in coins: pygame.draw.circle(screen, GOLD, camera.apply(c).center, 6)
             for c in coins: screen.blit(coin_img, camera.apply(c))
             for m in monsters: screen.blit(m.image, camera.apply(m.rect))
+
+            if health_pack:
+                screen.blit(health_pack_img, camera.apply(health_pack))
+
             
             # Draw player (with hiding effect)
             p_rect_shaken = camera.apply(player.rect)
