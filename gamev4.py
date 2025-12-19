@@ -99,7 +99,7 @@ menu_bg = load_img("img/Final_poster.png", (WIDTH, HEIGHT), (20, 20, 20))
 victory_music = pygame.mixer.Sound("sound/victory.mp3")
 lvl_1_music = pygame.mixer.Sound("sound/lvl_1.mp3")
 coin_sound = pygame.mixer.Sound("sound/coin.mp3")
-collision_sound = pygame.mixer.Sound("sound/yru_runnen.mp3")
+collision_sound = pygame.mixer.Sound("sound/catch.mp3")
 scary_sound = pygame.mixer.Sound("video/end.wav")
 
 
@@ -422,7 +422,7 @@ def main_game():
             for m in monsters:
                 m.update(player, walls)
                 if m.rect.colliderect(player.rect) and not player.is_hidden:
-                    # collision_sound.play()
+                    collision_sound.play()
                     player.health -= 0.5 # Damage
                     is_touching_monster = True # Trigger Shake
                 
