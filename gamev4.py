@@ -94,7 +94,9 @@ player_img_left = player_img
 player_img_right = pygame.transform.flip(player_img, True, False)
 
 bush_img = load_img("img/bush.png", (40, 40), (0, 100, 0))
+coin_img = load_img("img/coin.png", (10, 10), (255, 215, 0))    
 menu_bg = load_img("img/Final_poster.png", (WIDTH, HEIGHT), (20, 20, 20))
+
 
 victory_music = pygame.mixer.Sound("sound/victory.mp3")
 lvl_1_music = pygame.mixer.Sound("sound/lvl_1.mp3")
