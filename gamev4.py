@@ -75,7 +75,7 @@ pygame.display.set_caption("The FOREST (Survive the forest!)")
 clock = pygame.time.Clock()
 
 # Colors
-FLOOR_COLOR = (220, 200, 160)
+FLOOR_COLOR = (140, 80, 20)
 WALL_COLOR = (80, 60, 50)
 WHITE = (255, 255, 255)
 RED = (200, 20, 20)
