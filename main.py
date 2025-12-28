@@ -121,7 +121,7 @@ load_assets()
 victory_music = pygame.mixer.Sound("sound/victory.mp3")
 lvl_1_music = pygame.mixer.Sound("sound/lvl_1.mp3")
 coin_sound = pygame.mixer.Sound("sound/coin.mp3")
-collision_sound = pygame.mixer.Sound("sound/lvl_1.mp3")
+collision_sound = pygame.mixer.Sound("sound/catch.mp3")
 scary_sound = pygame.mixer.Sound("video/end.wav")
 
 
